@@ -1,0 +1,22 @@
+{
+  "name": "Plumb Line - Rooted Guide",
+  "short_name": "Rooted Guide",
+  "description": "A minimal, personal Bible-study guide centered on a blinking cursor, with grounded Scripture, daily path, and offline reader.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#121511",
+  "theme_color": "#121511",
+  "icons": [
+    {
+      "src": "/app-logo-adaptive.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}

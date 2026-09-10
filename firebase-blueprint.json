@@ -1,0 +1,124 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile and account settings",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 256 },
+        "displayName": { "type": "string", "maxLength": 128 },
+        "photoURL": { "type": "string", "maxLength": 512 },
+        "createdAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["uid", "email"]
+    },
+    "Plant": {
+      "title": "Plant",
+      "description": "Botanical plant tracker with watering and fertilization schedule",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 128 },
+        "species": { "type": "string", "maxLength": 128 },
+        "waterFrequencyDays": { "type": "number" },
+        "fertilizeFrequencyDays": { "type": "number" },
+        "lastWateredAt": { "type": "string", "maxLength": 64 },
+        "lastFertilizedAt": { "type": "string", "maxLength": 64 },
+        "notes": { "type": "string", "maxLength": 1024 },
+        "createdAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "userId", "name", "waterFrequencyDays"]
+    },
+    "Article": {
+      "title": "Article",
+      "description": "Botanical plant care guides and spiritual articles for offline reading",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 256 },
+        "category": { "type": "string", "maxLength": 64 },
+        "summary": { "type": "string", "maxLength": 512 },
+        "content": { "type": "string", "maxLength": 8192 },
+        "scriptureRef": { "type": "string", "maxLength": 128 },
+        "readTimeMinutes": { "type": "number" },
+        "createdAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "title", "category", "content"]
+    },
+    "ForumPost": {
+      "title": "ForumPost",
+      "description": "Community discussion posts, plant care questions, and reflections",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "authorName": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 256 },
+        "content": { "type": "string", "maxLength": 4096 },
+        "category": { "type": "string", "maxLength": 64 },
+        "likesCount": { "type": "number" },
+        "createdAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "userId", "authorName", "title", "content"]
+    },
+    "BiblePlan": {
+      "title": "BiblePlan",
+      "description": "Dynamic Bible study plan formulated with OpenRouter AI",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 256 },
+        "focus": { "type": "string", "maxLength": 128 },
+        "currentDay": { "type": "number" },
+        "totalDays": { "type": "number" },
+        "createdAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "userId", "title"]
+    },
+    "Reflection": {
+      "title": "Reflection",
+      "description": "User journal entries, prayers, and scripture notes",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "book": { "type": "string", "maxLength": 64 },
+        "chapter": { "type": "number" },
+        "verse": { "type": "number" },
+        "content": { "type": "string", "maxLength": 4096 },
+        "kind": { "type": "string", "maxLength": 32 },
+        "createdAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "userId", "content", "kind"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Stores user account information"
+    },
+    "/users/{userId}/plants/{plantId}": {
+      "schema": "Plant",
+      "description": "Stores user's tracked plants and watering reminders"
+    },
+    "/users/{userId}/biblePlans/{planId}": {
+      "schema": "BiblePlan",
+      "description": "Stores user's dynamic adaptive Bible plans"
+    },
+    "/users/{userId}/reflections/{reflectionId}": {
+      "schema": "Reflection",
+      "description": "Stores user's private reflections, prayers, and notes"
+    },
+    "/articles/{articleId}": {
+      "schema": "Article",
+      "description": "Published botanical care guides and spiritual articles for offline viewing"
+    },
+    "/forumPosts/{postId}": {
+      "schema": "ForumPost",
+      "description": "Community forum discussions and shared reflections"
+    }
+  }
+}

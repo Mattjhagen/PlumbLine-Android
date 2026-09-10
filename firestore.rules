@@ -1,0 +1,70 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Pillar 1: Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Users Collection
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidId(userId);
+      allow update: if isOwner(userId);
+      allow delete: if isOwner(userId);
+
+      // User's Plants
+      match /plants/{plantId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      // User's Dynamic Bible Plans
+      match /biblePlans/{planId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      // User's Saved Reflections & Notes
+      match /reflections/{reflectionId} {
+        allow read, write: if isOwner(userId);
+      }
+    }
+
+    // Articles (Care Guides & Scripture Articles for Offline Download)
+    match /articles/{articleId} {
+      allow read: if true; // Publicly readable for offline access and caching
+      allow write: if isSignedIn(); // Content managers / authenticated users
+    }
+
+    // Community Forum Posts
+    match /forumPosts/{postId} {
+      allow read: if true;
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid;
+      allow update: if isSignedIn() && (
+        existing().userId == request.auth.uid ||
+        incoming().diff(existing()).affectedKeys().hasOnly(['likesCount'])
+      );
+      allow delete: if isSignedIn() && existing().userId == request.auth.uid;
+    }
+  }
+}

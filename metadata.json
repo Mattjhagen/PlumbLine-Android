@@ -1,0 +1,8 @@
+{
+  "name": "Remix Plumb Line - Android",
+  "description": "A minimal, personal Bible-study guide centered on a blinking cursor, with grounded Scripture, daily path, and offline reader.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
