@@ -195,19 +195,11 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
             {pushPermission !== 'granted' && (
               <button
                 onClick={handleEnablePush}
-                className="px-2.5 py-1 rounded-lg bg-amber-500 text-black font-semibold text-[11px] hover:bg-amber-400 transition-colors cursor-pointer"
+                className="px-3 py-1 rounded-lg bg-amber-500 text-black font-semibold text-[11px] hover:bg-amber-400 transition-colors cursor-pointer"
               >
                 Enable
               </button>
             )}
-            <button
-              onClick={handleTestPush}
-              className="px-2.5 py-1 rounded-lg bg-[var(--bg-main)] border border-[var(--border-subtle)] text-[11px] text-[var(--text-main)] hover:border-amber-500/40 transition-colors flex items-center gap-1 cursor-pointer"
-              title="Test push notification right now"
-            >
-              <Send size={11} className="text-amber-400" />
-              <span>{testPushStatus || 'Test Push'}</span>
-            </button>
           </div>
         </div>
 

@@ -15,7 +15,6 @@ import {
   ShieldCheck,
   CheckCircle,
   X,
-  Smartphone,
 } from 'lucide-react';
 import { PlumbLineLogo } from './components/PlumbLineLogo';
 import { LaunchScreen } from './components/LaunchScreen';
@@ -31,7 +30,6 @@ import { CommunityForumView } from './components/CommunityForumView';
 import { AuthModal } from './components/AuthModal';
 import { NotificationModal } from './components/NotificationModal';
 import { AndroidInstallBanner } from './components/AndroidInstallBanner';
-import { AndroidPackageModal } from './components/AndroidPackageModal';
 import { haptics } from './utils/haptics';
 import { usePWAInstall } from './utils/usePWAInstall';
 import { useAndroidBackButton } from './utils/useAndroidBackButton';
@@ -43,6 +41,7 @@ import {
   getDoc,
   setDoc,
   onAuthStateChanged,
+  getRedirectResult,
   FirebaseUser,
 } from './lib/firebase';
 import {
@@ -78,8 +77,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<TabType>('path');
   const [tabHistory, setTabHistory] = useState<TabType[]>(['path']);
 
-  // Android Native state & PWA Install
-  const [showAndroidCenter, setShowAndroidCenter] = useState<boolean>(false);
+  // PWA Install state
   const { isInstalled, isInstallable, install } = usePWAInstall();
 
   const handleSelectTab = useCallback((tab: TabType) => {
@@ -101,14 +99,11 @@ export default function App() {
     ? 'auth'
     : showNotificationModal
     ? 'notifications'
-    : showAndroidCenter
-    ? 'android_center'
     : null;
 
   const handleCloseActiveModal = useCallback(() => {
     setShowAuthModal(false);
     setShowNotificationModal(false);
-    setShowAndroidCenter(false);
   }, []);
 
   useAndroidBackButton({
@@ -130,6 +125,31 @@ export default function App() {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
     });
+
+    // Check for Apple/Google redirect authentication results upon app mount
+    getRedirectResult(auth)
+      .then((result) => {
+        if (result?.user) {
+          setCurrentUser(result.user);
+          setInAppToast(`Signed in as ${result.user.displayName || result.user.email || 'Apple User'}`);
+        }
+      })
+      .catch((err) => {
+        if (err?.code && err.code !== 'auth/null-user') {
+          console.warn('Redirect auth result check:', err);
+        }
+      });
+
+    // Query parameter hook for direct auth opening
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('openAuth') === 'apple' || params.get('auth') === 'open') {
+        setShowAuthModal(true);
+      }
+    } catch {
+      // ignore
+    }
+
     return () => unsubscribe();
   }, []);
 
@@ -546,21 +566,6 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-1.5">
-            {/* Android AAB & APK Center */}
-            <button
-              onClick={() => {
-                haptics.tap();
-                setShowAndroidCenter(true);
-              }}
-              className="p-2 rounded-xl text-[var(--text-muted)] hover:text-emerald-500 hover:bg-[var(--bg-muted)] relative transition-colors cursor-pointer"
-              title="Native Android (AAB & APK) Center"
-            >
-              <Smartphone size={17} />
-              {isInstallable && !isInstalled && (
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              )}
-            </button>
-
             {/* Notification Bell */}
             <button
               onClick={() => {
@@ -603,8 +608,8 @@ export default function App() {
           </div>
         </header>
 
-        {/* Android In-App APK / PWA Install Prompt Banner */}
-        <AndroidInstallBanner onOpenAndroidCenter={() => setShowAndroidCenter(true)} />
+        {/* Install Prompt Banner */}
+        <AndroidInstallBanner />
 
         {/* Horizontal Category Navigation Track */}
         <div className="h-10 border-b border-[var(--border-subtle)] bg-[var(--bg-main)] px-3 flex items-center gap-1.5 overflow-x-auto shrink-0 select-none scrollbar-none">
@@ -936,15 +941,6 @@ export default function App() {
           isOpen={showNotificationModal}
           onClose={() => setShowNotificationModal(false)}
           onNavigateTab={(tab) => handleSelectTab(tab)}
-        />
-
-        {/* Android Package & AAB/APK Center Modal */}
-        <AndroidPackageModal
-          isOpen={showAndroidCenter}
-          onClose={() => setShowAndroidCenter(false)}
-          isStandalone={isInstalled}
-          isInstallable={isInstallable}
-          onTriggerInstall={install}
         />
 
         {/* In-App Push Notification Confirmation Toast */}

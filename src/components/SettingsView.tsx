@@ -21,8 +21,6 @@ import {
   Layers,
 } from 'lucide-react';
 import { PlumbLineLogo } from './PlumbLineLogo';
-import { sendTestPushNotification } from '../utils/taskNotificationManager';
-import { AndroidPackageModal } from './AndroidPackageModal';
 import { haptics } from '../utils/haptics';
 
 interface SettingsViewProps {
@@ -51,8 +49,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   onTriggerInstall,
 }) => {
   const [activeLegalModal, setActiveLegalModal] = useState<'privacy' | 'terms' | null>(null);
-  const [testPushStatus, setTestPushStatus] = useState<string | null>(null);
-  const [showAndroidModal, setShowAndroidModal] = useState<boolean>(false);
 
   return (
     <div
@@ -100,77 +96,39 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           </div>
         </div>
 
-        {/* Native Android (AAB & APK) Package Section */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between px-1">
-            <span className="text-[11px] uppercase tracking-wider text-[var(--text-tertiary)] font-bold">
-              Native Android Package (AAB & APK)
+        {/* Application Installation */}
+        {isInstallable && !isStandalone && onTriggerInstall && (
+          <div className="space-y-2">
+            <span className="text-[11px] uppercase tracking-wider text-[var(--text-tertiary)] font-bold px-1">
+              Application Installation
             </span>
-            <span className="text-[10px] text-emerald-500 font-medium flex items-center gap-1">
-              <CheckCircle2 size={11} />
-              <span>Google Play Compatible</span>
-            </span>
-          </div>
-          <div className="p-4 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] shadow-xs space-y-3">
-            <div className="flex items-center justify-between">
+            <div className="p-4 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] shadow-xs flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <div className="w-9 h-9 rounded-xl bg-emerald-500/15 text-emerald-500 flex items-center justify-center font-semibold text-sm">
                   <Smartphone size={18} />
                 </div>
                 <div>
-                  <p className="text-xs font-semibold text-[var(--text-main)] flex items-center gap-1.5">
-                    <span>com.mattjhagen.plumbline</span>
-                    <span className="text-[9px] px-1.5 py-0.2 rounded bg-[var(--bg-muted)] text-[var(--text-muted)] font-mono">
-                      v1.0.0 (100)
-                    </span>
+                  <p className="text-xs font-semibold text-[var(--text-main)]">
+                    Install to Device
                   </p>
                   <p className="text-[10px] text-[var(--text-muted)] mt-0.5">
-                    {isStandalone ? 'Running as standalone Android app' : 'Target SDK 35 (Android 15) • Min SDK 24'}
+                    Add to home screen for full offline scripture study and quick access
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-1.5">
-                {isInstallable && !isStandalone && onTriggerInstall && (
-                  <button
-                    onClick={() => {
-                      haptics.selection();
-                      onTriggerInstall();
-                    }}
-                    className="px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs transition-colors cursor-pointer shadow-xs"
-                  >
-                    Install APK
-                  </button>
-                )}
-                <button
-                  onClick={() => {
-                    haptics.tap();
-                    setShowAndroidModal(true);
-                  }}
-                  className="px-3 py-1.5 rounded-xl bg-[var(--bg-muted)] text-[var(--text-main)] text-xs font-medium hover:bg-[var(--accent-gold-light)] hover:text-[var(--accent-gold)] transition-colors flex items-center gap-1 cursor-pointer"
-                >
-                  <span>Build & Specs</span>
-                  <ChevronRight size={13} />
-                </button>
-              </div>
-            </div>
-
-            <div className="pt-2 border-t border-[var(--border-subtle)] grid grid-cols-3 gap-1.5 text-center">
-              <div className="p-1.5 rounded-lg bg-[var(--bg-muted)]">
-                <span className="text-[9px] text-[var(--text-tertiary)] block uppercase">Format</span>
-                <span className="text-[11px] font-semibold text-[var(--text-main)]">AAB + APK</span>
-              </div>
-              <div className="p-1.5 rounded-lg bg-[var(--bg-muted)]">
-                <span className="text-[9px] text-[var(--text-tertiary)] block uppercase">Haptics</span>
-                <span className="text-[11px] font-semibold text-emerald-500">Active</span>
-              </div>
-              <div className="p-1.5 rounded-lg bg-[var(--bg-muted)]">
-                <span className="text-[9px] text-[var(--text-tertiary)] block uppercase">AssetLinks</span>
-                <span className="text-[11px] font-semibold text-emerald-500">Verified</span>
-              </div>
+              <button
+                onClick={() => {
+                  haptics.selection();
+                  onTriggerInstall();
+                }}
+                className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs transition-colors cursor-pointer shadow-xs"
+              >
+                Install App
+              </button>
             </div>
           </div>
-        </div>
+        )}
 
         {/* User Account / Firebase Auth */}
         <div className="space-y-2">
@@ -231,18 +189,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button
-                    onClick={async () => {
-                      setTestPushStatus('Sending test...');
-                      const res = await sendTestPushNotification();
-                      setTestPushStatus(res.success ? 'Delivered!' : 'Sent in-app');
-                      setTimeout(() => setTestPushStatus(null), 3000);
-                    }}
-                    className="px-2.5 py-1.5 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20 text-xs font-medium hover:bg-amber-500/20 transition-colors flex items-center gap-1 cursor-pointer"
-                    title="Send a live test push notification to verify"
-                  >
-                    <span>{testPushStatus || 'Test Push'}</span>
-                  </button>
                   <button
                     onClick={onOpenNotifications}
                     className="px-3 py-1.5 rounded-xl bg-[var(--bg-muted)] text-[var(--text-main)] text-xs font-medium hover:bg-[var(--accent-gold-light)] hover:text-[var(--accent-gold)] transition-colors flex items-center gap-1 cursor-pointer"
@@ -539,14 +485,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </div>
       )}
 
-      {/* Android Package & Play Store AAB/APK Modal */}
-      <AndroidPackageModal
-        isOpen={showAndroidModal}
-        onClose={() => setShowAndroidModal(false)}
-        isStandalone={isStandalone}
-        isInstallable={isInstallable}
-        onTriggerInstall={onTriggerInstall}
-      />
+      {/* End Settings */}
     </div>
   );
 };

@@ -3,13 +3,9 @@ import { Smartphone, Download, X, CheckCircle2 } from 'lucide-react';
 import { usePWAInstall } from '../utils/usePWAInstall';
 import { haptics } from '../utils/haptics';
 
-interface AndroidInstallBannerProps {
-  onOpenAndroidCenter?: () => void;
-}
+interface AndroidInstallBannerProps {}
 
-export const AndroidInstallBanner: React.FC<AndroidInstallBannerProps> = ({
-  onOpenAndroidCenter,
-}) => {
+export const AndroidInstallBanner: React.FC<AndroidInstallBannerProps> = () => {
   const { isInstallable, isInstalled, install } = usePWAInstall();
   const [dismissed, setDismissed] = useState<boolean>(() => {
     try {
@@ -19,18 +15,14 @@ export const AndroidInstallBanner: React.FC<AndroidInstallBannerProps> = ({
     }
   });
 
-  // If already installed as native standalone APK/AAB or dismissed in this session, do not show
-  if (isInstalled || dismissed) {
+  // If already installed or dismissed in this session, do not show
+  if (isInstalled || dismissed || !isInstallable) {
     return null;
   }
 
   const handleInstallClick = async () => {
     haptics.selection();
-    if (isInstallable) {
-      await install();
-    } else if (onOpenAndroidCenter) {
-      onOpenAndroidCenter();
-    }
+    await install();
   };
 
   const handleDismiss = () => {
@@ -57,7 +49,7 @@ export const AndroidInstallBanner: React.FC<AndroidInstallBannerProps> = ({
         </div>
         <div className="truncate">
           <span className="font-semibold text-emerald-400 text-[11px] mr-1.5">
-            Android Native APK
+            Install Application
           </span>
           <span className="text-[10px] text-[var(--text-muted)] hidden xs:inline">
             Install on your home screen for full offline study

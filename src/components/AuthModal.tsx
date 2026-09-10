@@ -13,6 +13,9 @@ import {
   Trash2,
   Eye,
   EyeOff,
+  ExternalLink,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import {
   auth,
@@ -24,11 +27,13 @@ import {
   signOut,
   deleteUser,
   sendPasswordResetEmail,
+  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   doc,
   deleteDoc,
   FirebaseUser,
 } from '../lib/firebase';
-import { signInWithPopup } from 'firebase/auth';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -50,6 +55,25 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [appleNeedsSetup, setAppleNeedsSetup] = useState(false);
+  const [showSetupSteps, setShowSetupSteps] = useState(false);
+
+  // Check for redirect result (e.g. returning from Apple or Google redirect authentication)
+  React.useEffect(() => {
+    getRedirectResult(auth)
+      .then((result) => {
+        if (result?.user) {
+          setSuccessMessage('Signed in successfully!');
+          setTimeout(() => onClose(), 1200);
+        }
+      })
+      .catch((err) => {
+        if (err?.code && err.code !== 'auth/null-user') {
+          console.warn('Redirect auth result error:', err);
+          setError(err.message || 'Authentication could not be completed.');
+        }
+      });
+  }, [onClose]);
 
   if (!isOpen) return null;
 
@@ -129,25 +153,57 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
   const handleAppleSignIn = async () => {
     setError(null);
+    setAppleNeedsSetup(false);
     setLoading(true);
+    const isInIframe = typeof window !== 'undefined' && window.self !== window.top;
+
     try {
-      await signInWithPopup(auth, appleProvider);
-      setSuccessMessage('Signed in with Apple!');
-      setTimeout(() => onClose(), 1200);
+      // In web/PWA: First attempt signInWithPopup
+      const result = await signInWithPopup(auth, appleProvider);
+      if (result?.user) {
+        setSuccessMessage('Signed in with Apple!');
+        setTimeout(() => onClose(), 1200);
+      }
     } catch (err: any) {
       if (err?.code === 'auth/popup-closed-by-user' || err?.code === 'auth/cancelled-popup-request') {
         // User voluntarily dismissed Apple sign-in popup
+        setLoading(false);
         return;
       }
-      console.error('Apple sign-in error:', err);
-      if (err.code === 'auth/operation-not-allowed') {
-        setError('Apple Sign-In is temporarily unavailable. Please try again or use another sign-in method.');
-      } else if (err.code === 'auth/popup-blocked') {
-        setError('Popup was blocked by your browser. Please allow popups or open the app in a dedicated tab.');
-      } else if (err.code === 'auth/unauthorized-domain') {
-        setError('Sign-in is temporarily unavailable from this connection.');
-      } else {
-        setError('Unable to complete Apple Sign-In. Please try again or use another sign-in method.');
+
+      console.warn('Apple sign-in attempt error:', err);
+
+      if (err?.code === 'auth/operation-not-allowed') {
+        setAppleNeedsSetup(true);
+        setError('Apple Sign-In is not enabled yet in your Firebase Console.');
+        setLoading(false);
+        return;
+      }
+
+      // In an iframe (e.g. AI Studio preview), Apple blocks embedded frames (X-Frame-Options: SAMEORIGIN)
+      if (isInIframe) {
+        if (err?.code === 'auth/popup-blocked' || err?.code === 'auth/unauthorized-domain' || err?.code === 'auth/internal-error') {
+          setError('Apple Sign-In requires a top-level window. Open the application in a dedicated window to sign in with your Apple ID.');
+        } else {
+          setError(err?.message || 'Apple Sign-In could not be opened in the embedded preview.');
+        }
+        setLoading(false);
+        return;
+      }
+
+      // Outside iframe (mobile Safari/Chrome, installed PWA, standalone Android/iOS):
+      // Fallback automatically to standard Firebase signInWithRedirect
+      try {
+        await signInWithRedirect(auth, appleProvider);
+        return;
+      } catch (redirectErr: any) {
+        console.error('Apple redirect error:', redirectErr);
+        if (redirectErr?.code === 'auth/operation-not-allowed') {
+          setAppleNeedsSetup(true);
+          setError('Apple Sign-In is not enabled yet in your Firebase Console.');
+        } else {
+          setError(redirectErr?.message || 'Unable to connect to Apple ID. Please try again.');
+        }
       }
     } finally {
       setLoading(false);
@@ -239,15 +295,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
             <div className="p-3 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-left text-xs mb-6 space-y-1.5">
               <div className="flex items-center justify-between">
-                <span className="text-[var(--text-muted)]">Cloud Sync:</span>
+                <span className="text-[var(--text-muted)]">Cloud Backup:</span>
                 <span className="text-emerald-500 font-medium flex items-center gap-1">
-                  <ShieldCheck size={13} /> Firebase & Cloud SQL Active
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-[var(--text-muted)]">Account UID:</span>
-                <span className="font-mono text-[10px] text-[var(--text-muted)] truncate max-w-[180px]">
-                  {currentUser.uid}
+                  <ShieldCheck size={13} /> Active & Synced
                 </span>
               </div>
               <div className="flex items-center justify-between">
@@ -287,7 +337,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   className="w-full py-2 px-4 rounded-xl text-rose-500 hover:bg-rose-500/10 font-medium text-[11px] tracking-wide transition-colors flex items-center justify-center gap-1.5 cursor-pointer opacity-80 hover:opacity-100"
                 >
                   <Trash2 size={13} />
-                  <span>Delete Account & Data (App Store Guideline 5.1.1)</span>
+                  <span>Delete Account & Personal Data</span>
                 </button>
               ) : (
                 <div className="p-3 rounded-xl border border-rose-500/30 bg-rose-500/5 text-left space-y-2">
@@ -331,18 +381,94 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               </h2>
               <p className="text-xs text-[var(--text-muted)] mt-1">
                 {mode === 'login' && 'Sync your scripture highlights, plants, and reflections across devices'}
-                {mode === 'signup' && 'Secure cloud backup with Firebase & Cloud SQL'}
+                {mode === 'signup' && 'Secure cloud backup for your reflections, prayers, and study'}
                 {mode === 'reset' && 'Enter your email to receive a password recovery link'}
               </p>
             </div>
 
             {/* Error or Success Alert */}
-            {error && (
-              <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs flex items-start gap-2">
-                <AlertCircle size={16} className="shrink-0 mt-0.5" />
-                <span>{error}</span>
+            {appleNeedsSetup ? (
+              <div className="mb-4 p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/25 text-left space-y-2.5">
+                <div className="flex items-start gap-2 text-amber-400">
+                  <AlertCircle size={17} className="shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-xs font-semibold text-amber-300">
+                      Apple Provider Setup Required
+                    </p>
+                    <p className="text-[11px] text-[var(--text-muted)] mt-0.5 leading-relaxed">
+                      To enable Apple Sign-In, Apple must be toggled on under Sign-in Providers in your Firebase project (<code className="text-amber-200">plumb-line-508101</code>).
+                    </p>
+                  </div>
+                </div>
+
+                <a
+                  href="https://console.firebase.google.com/project/plumb-line-508101/authentication/providers"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="w-full py-2 px-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                >
+                  <span>Open Firebase Console Providers</span>
+                  <ExternalLink size={13} />
+                </a>
+
+                <div className="pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setShowSetupSteps(!showSetupSteps)}
+                    className="w-full py-1 text-[11px] text-amber-300/80 hover:text-amber-300 flex items-center justify-between cursor-pointer transition-colors"
+                  >
+                    <span>{showSetupSteps ? 'Hide setup steps' : 'View Apple Developer setup steps'}</span>
+                    {showSetupSteps ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                  </button>
+
+                  {showSetupSteps && (
+                    <div className="mt-2 p-2.5 rounded-xl bg-[var(--bg-main)] border border-[var(--border-subtle)] text-[11px] text-[var(--text-secondary)] space-y-1.5 font-normal">
+                      <p className="font-semibold text-[var(--text-main)]">How to enable in Firebase:</p>
+                      <ol className="list-decimal pl-4 space-y-1 text-[10.5px] leading-relaxed">
+                        <li>In Firebase Console, click <span className="text-[var(--text-main)] font-medium">Add new provider</span> &rarr; select <span className="text-[var(--text-main)] font-medium">Apple</span>.</li>
+                        <li>Toggle <span className="text-[var(--text-main)] font-medium">Enable</span>.</li>
+                        <li>Enter your Apple Services ID (e.g. <code>com.mattjhagen.plumbline</code>).</li>
+                        <li>Enter your Apple Team ID, Key ID, and upload your private key (<code>.p8</code>) from developer.apple.com.</li>
+                        <li>Click <span className="text-[var(--text-main)] font-medium">Save</span>.</li>
+                      </ol>
+                    </div>
+                  )}
+                </div>
+
+                <div className="pt-1.5 border-t border-amber-500/20 flex items-center justify-between">
+                  <span className="text-[10.5px] text-[var(--text-muted)]">Available immediately:</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAppleNeedsSetup(false);
+                      setError(null);
+                    }}
+                    className="text-[11px] text-emerald-400 hover:text-emerald-300 font-medium cursor-pointer"
+                  >
+                    Use Google or Email &rarr;
+                  </button>
+                </div>
               </div>
-            )}
+            ) : error ? (
+              <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs flex flex-col gap-2 text-left">
+                <div className="flex items-start gap-2">
+                  <AlertCircle size={16} className="shrink-0 mt-0.5" />
+                  <span>{error}</span>
+                </div>
+                {error.includes('top-level') && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      window.open(window.location.origin + '?openAuth=apple', '_blank');
+                    }}
+                    className="w-full mt-1 py-2 px-3 rounded-xl bg-[var(--text-main)] text-[var(--bg-main)] text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm hover:opacity-90 transition-opacity"
+                  >
+                    <ExternalLink size={13} />
+                    <span>Open Dedicated Window for Apple Sign-In</span>
+                  </button>
+                )}
+              </div>
+            ) : null}
             {successMessage && (
               <div className="mb-4 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs flex items-start gap-2">
                 <CheckCircle size={16} className="shrink-0 mt-0.5" />

@@ -9,6 +9,9 @@ import {
   deleteUser,
   sendPasswordResetEmail,
   onAuthStateChanged,
+  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   User as FirebaseUser,
 } from 'firebase/auth';
 import {
@@ -33,6 +36,9 @@ export const googleProvider = new GoogleAuthProvider();
 export const appleProvider = new OAuthProvider('apple.com');
 appleProvider.addScope('email');
 appleProvider.addScope('name');
+appleProvider.setCustomParameters({
+  locale: 'en',
+});
 
 // Initialize Firestore with offline persistence
 let firestoreInstance;
@@ -56,6 +62,10 @@ export {
   deleteUser,
   sendPasswordResetEmail,
   onAuthStateChanged,
+  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
+  OAuthProvider,
   doc,
   getDoc,
   setDoc,
