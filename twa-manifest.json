@@ -1,0 +1,65 @@
+{
+  "packageId": "com.mattjhagen.plumbline",
+  "host": "ais-dev-jgw4hl7aszltvulpgwdmt2-42749824887.us-west1.run.app",
+  "name": "Plumb Line - Rooted Guide",
+  "launcherName": "Plumb Line",
+  "themeColor": "#0D0B09",
+  "navigationColor": "#0D0B09",
+  "navigationColorDark": "#0D0B09",
+  "navigationDividerColor": "#2B2621",
+  "navigationDividerColorDark": "#2B2621",
+  "backgroundColor": "#0D0B09",
+  "enableNotifications": true,
+  "startUrl": "/?utm_source=android_app",
+  "iconUrl": "/app-logo-adaptive.png",
+  "maskableIconUrl": "/app-logo-adaptive.png",
+  "monochromeIconUrl": "/assets/android-icon-monochrome.png",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "./android.keystore",
+    "alias": "android"
+  },
+  "appVersionCode": 100,
+  "appVersionName": "1.0.0",
+  "minSdkVersion": 24,
+  "targetSdkVersion": 35,
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "shortcuts": [
+    {
+      "name": "Today's Path",
+      "short_name": "Today",
+      "url": "/?tab=path",
+      "icon": "/icon.png"
+    },
+    {
+      "name": "Scripture Reader",
+      "short_name": "Bible",
+      "url": "/?tab=bible",
+      "icon": "/icon.png"
+    },
+    {
+      "name": "AI Study Plan",
+      "short_name": "AI Plan",
+      "url": "/?tab=dynamic_plan",
+      "icon": "/icon.png"
+    },
+    {
+      "name": "Botanical Care",
+      "short_name": "Plants",
+      "url": "/?tab=plants",
+      "icon": "/icon.png"
+    }
+  ],
+  "features": {
+    "locationDelegation": {
+      "enabled": false
+    },
+    "playBilling": {
+      "enabled": false
+    }
+  },
+  "alphaDependencies": {
+    "enabled": false
+  }
+}

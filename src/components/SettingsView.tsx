@@ -17,9 +17,13 @@ import {
   HeartHandshake,
   Mail,
   ChevronRight,
+  Package,
+  Layers,
 } from 'lucide-react';
 import { PlumbLineLogo } from './PlumbLineLogo';
 import { sendTestPushNotification } from '../utils/taskNotificationManager';
+import { AndroidPackageModal } from './AndroidPackageModal';
+import { haptics } from '../utils/haptics';
 
 interface SettingsViewProps {
   currentTheme: 'system' | 'light' | 'dark';
@@ -29,6 +33,9 @@ interface SettingsViewProps {
   currentUser?: any;
   onOpenAuth?: () => void;
   onOpenNotifications?: () => void;
+  isStandalone?: boolean;
+  isInstallable?: boolean;
+  onTriggerInstall?: () => void;
 }
 
 export const SettingsView: React.FC<SettingsViewProps> = ({
@@ -39,9 +46,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   currentUser,
   onOpenAuth,
   onOpenNotifications,
+  isStandalone = false,
+  isInstallable = false,
+  onTriggerInstall,
 }) => {
   const [activeLegalModal, setActiveLegalModal] = useState<'privacy' | 'terms' | null>(null);
   const [testPushStatus, setTestPushStatus] = useState<string | null>(null);
+  const [showAndroidModal, setShowAndroidModal] = useState<boolean>(false);
 
   return (
     <div
@@ -86,6 +97,78 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               <CheckCircle2 size={11} className="text-emerald-500" />
               <span>Offline-first on-device architecture</span>
             </p>
+          </div>
+        </div>
+
+        {/* Native Android (AAB & APK) Package Section */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between px-1">
+            <span className="text-[11px] uppercase tracking-wider text-[var(--text-tertiary)] font-bold">
+              Native Android Package (AAB & APK)
+            </span>
+            <span className="text-[10px] text-emerald-500 font-medium flex items-center gap-1">
+              <CheckCircle2 size={11} />
+              <span>Google Play Compatible</span>
+            </span>
+          </div>
+          <div className="p-4 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] shadow-xs space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-emerald-500/15 text-emerald-500 flex items-center justify-center font-semibold text-sm">
+                  <Smartphone size={18} />
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-[var(--text-main)] flex items-center gap-1.5">
+                    <span>com.mattjhagen.plumbline</span>
+                    <span className="text-[9px] px-1.5 py-0.2 rounded bg-[var(--bg-muted)] text-[var(--text-muted)] font-mono">
+                      v1.0.0 (100)
+                    </span>
+                  </p>
+                  <p className="text-[10px] text-[var(--text-muted)] mt-0.5">
+                    {isStandalone ? 'Running as standalone Android app' : 'Target SDK 35 (Android 15) • Min SDK 24'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                {isInstallable && !isStandalone && onTriggerInstall && (
+                  <button
+                    onClick={() => {
+                      haptics.selection();
+                      onTriggerInstall();
+                    }}
+                    className="px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs transition-colors cursor-pointer shadow-xs"
+                  >
+                    Install APK
+                  </button>
+                )}
+                <button
+                  onClick={() => {
+                    haptics.tap();
+                    setShowAndroidModal(true);
+                  }}
+                  className="px-3 py-1.5 rounded-xl bg-[var(--bg-muted)] text-[var(--text-main)] text-xs font-medium hover:bg-[var(--accent-gold-light)] hover:text-[var(--accent-gold)] transition-colors flex items-center gap-1 cursor-pointer"
+                >
+                  <span>Build & Specs</span>
+                  <ChevronRight size={13} />
+                </button>
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-[var(--border-subtle)] grid grid-cols-3 gap-1.5 text-center">
+              <div className="p-1.5 rounded-lg bg-[var(--bg-muted)]">
+                <span className="text-[9px] text-[var(--text-tertiary)] block uppercase">Format</span>
+                <span className="text-[11px] font-semibold text-[var(--text-main)]">AAB + APK</span>
+              </div>
+              <div className="p-1.5 rounded-lg bg-[var(--bg-muted)]">
+                <span className="text-[9px] text-[var(--text-tertiary)] block uppercase">Haptics</span>
+                <span className="text-[11px] font-semibold text-emerald-500">Active</span>
+              </div>
+              <div className="p-1.5 rounded-lg bg-[var(--bg-muted)]">
+                <span className="text-[9px] text-[var(--text-tertiary)] block uppercase">AssetLinks</span>
+                <span className="text-[11px] font-semibold text-emerald-500">Verified</span>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -215,7 +298,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               return (
                 <button
                   key={opt.id}
-                  onClick={() => onSelectTheme(opt.id)}
+                  onClick={() => {
+                    haptics.selection();
+                    onSelectTheme(opt.id);
+                  }}
                   className={`p-3 rounded-2xl border text-center flex flex-col items-center gap-1.5 transition-all cursor-pointer ${
                     isSelected
                       ? 'border-[var(--accent-gold)] bg-[var(--bg-surface)] shadow-xs'
@@ -401,13 +487,17 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   </p>
                   <p className="font-semibold text-[var(--text-main)]">3. Account & Data Deletion</p>
                   <p>
-                    In accordance with Apple App Store Review Guideline 5.1.1(v), you can permanently delete your account and all associated cloud data at any time from the Account screen, or clear your local device storage with one tap.
+                    In accordance with Google Play Store Developer Program Policies, Android Data Safety guidelines, and Apple App Store Review Guideline 5.1.1(v), you can permanently delete your account and all associated cloud data at any time from the Account screen, or clear your local device storage with one tap.
                   </p>
-                  <p className="font-semibold text-[var(--text-main)]">4. Third-Party Services</p>
+                  <p className="font-semibold text-[var(--text-main)]">4. Android Permissions & Privacy</p>
+                  <p>
+                    Rooted Guide requests zero invasive permissions. It operates strictly within sandboxed storage and only uses the Notification permission when explicitly scheduled for botanical reminders and devotional alerts.
+                  </p>
+                  <p className="font-semibold text-[var(--text-main)]">5. Third-Party Services</p>
                   <p>
                     All AI interactions are processed through secured server-side proxies without exposing client secrets or device identifiers. No third-party ad networks or user tracking trackers are used.
                   </p>
-                  <p className="font-semibold text-[var(--text-main)]">5. Contact</p>
+                  <p className="font-semibold text-[var(--text-main)]">6. Contact</p>
                   <p>For privacy inquiries, contact the developer at: matty@purepulse.one</p>
                 </>
               ) : (
@@ -448,6 +538,15 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           </div>
         </div>
       )}
+
+      {/* Android Package & Play Store AAB/APK Modal */}
+      <AndroidPackageModal
+        isOpen={showAndroidModal}
+        onClose={() => setShowAndroidModal(false)}
+        isStandalone={isStandalone}
+        isInstallable={isInstallable}
+        onTriggerInstall={onTriggerInstall}
+      />
     </div>
   );
 };

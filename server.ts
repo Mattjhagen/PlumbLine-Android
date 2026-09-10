@@ -128,9 +128,78 @@ app.get('/api/production-config', (req, res) => {
     },
     deployment: {
       easProfile: 'production',
-      platform: 'ios',
-      distribution: 'app-store',
-      cliCommand: 'npx eas-cli build --platform ios --profile production',
+      platform: 'android',
+      supportedPlatforms: ['android', 'ios'],
+      android: {
+        packageId: 'com.mattjhagen.plumbline',
+        versionCode: 100,
+        versionName: '1.0.0',
+        minSdkVersion: 24,
+        targetSdkVersion: 35,
+        formats: ['aab', 'apk'],
+        cliCommand: 'bubblewrap build',
+        aabOutput: 'app-release-bundle.aab',
+        apkOutput: 'app-release-signed.apk',
+        distribution: 'google-play-store',
+      },
+      ios: {
+        bundleIdentifier: 'com.mattjhagen.plumbline',
+        cliCommand: 'npx eas-cli build --platform ios --profile production',
+      },
+      cliCommand: 'bubblewrap build',
+    },
+  });
+});
+
+// Digital Asset Links for Android App Verification & Fullscreen Mode
+app.get('/.well-known/assetlinks.json', (req, res) => {
+  const assetLinksPath = path.resolve(process.cwd(), 'public', '.well-known', 'assetlinks.json');
+  if (fs.existsSync(assetLinksPath)) {
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    return res.sendFile(assetLinksPath);
+  }
+  res.json([
+    {
+      relation: ['delegate_permission/common.handle_all_urls'],
+      target: {
+        namespace: 'android_app',
+        package_name: 'com.mattjhagen.plumbline',
+        sha256_cert_fingerprints: [
+          '14:6D:E9:44:AB:F0:60:73:86:8E:24:DC:02:2B:56:46:71:FF:6B:08:D4:69:68:E3:49:F4:3B:24:A5:50:52:42',
+        ],
+      },
+    },
+  ]);
+});
+
+// Android TWA Manifest
+app.get('/twa-manifest.json', (req, res) => {
+  const twaPath = path.resolve(process.cwd(), 'twa-manifest.json');
+  if (fs.existsSync(twaPath)) {
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    return res.sendFile(twaPath);
+  }
+  res.status(404).json({ error: 'twa-manifest.json not found' });
+});
+
+// Android Configuration API
+app.get('/api/android/config', (req, res) => {
+  res.json({
+    packageId: 'com.mattjhagen.plumbline',
+    appName: 'Plumb Line - Rooted Guide',
+    launcherName: 'Plumb Line',
+    versionCode: 100,
+    versionName: '1.0.0',
+    minSdkVersion: 24,
+    targetSdkVersion: 35,
+    orientation: 'portrait-primary',
+    display: 'standalone',
+    themeColor: '#0D0B09',
+    backgroundColor: '#0D0B09',
+    formats: ['aab', 'apk'],
+    commands: {
+      installCli: 'npm install -g @bubblewrap/cli',
+      buildRelease: 'bubblewrap build',
     },
   });
 });

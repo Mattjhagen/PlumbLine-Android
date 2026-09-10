@@ -15,6 +15,7 @@ import {
   ShieldCheck,
   CheckCircle,
   X,
+  Smartphone,
 } from 'lucide-react';
 import { PlumbLineLogo } from './components/PlumbLineLogo';
 import { LaunchScreen } from './components/LaunchScreen';
@@ -29,6 +30,11 @@ import { ArticlesView } from './components/ArticlesView';
 import { CommunityForumView } from './components/CommunityForumView';
 import { AuthModal } from './components/AuthModal';
 import { NotificationModal } from './components/NotificationModal';
+import { AndroidInstallBanner } from './components/AndroidInstallBanner';
+import { AndroidPackageModal } from './components/AndroidPackageModal';
+import { haptics } from './utils/haptics';
+import { usePWAInstall } from './utils/usePWAInstall';
+import { useAndroidBackButton } from './utils/useAndroidBackButton';
 import { getReconciledTasks } from './utils/taskNotificationManager';
 import {
   auth,
@@ -70,6 +76,17 @@ export default function App() {
 
   // Active navigation tab
   const [activeTab, setActiveTab] = useState<TabType>('path');
+  const [tabHistory, setTabHistory] = useState<TabType[]>(['path']);
+
+  // Android Native state & PWA Install
+  const [showAndroidCenter, setShowAndroidCenter] = useState<boolean>(false);
+  const { isInstalled, isInstallable, install } = usePWAInstall();
+
+  const handleSelectTab = useCallback((tab: TabType) => {
+    haptics.selection();
+    setTabHistory((prev) => [...prev.slice(-12), tab]);
+    setActiveTab(tab);
+  }, []);
 
   // Firebase Auth state
   const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
@@ -78,6 +95,36 @@ export default function App() {
   // Notifications state
   const [showNotificationModal, setShowNotificationModal] = useState<boolean>(false);
   const [remindersCount, setRemindersCount] = useState<number>(0);
+
+  // Android Back button management
+  const activeModalName = showAuthModal
+    ? 'auth'
+    : showNotificationModal
+    ? 'notifications'
+    : showAndroidCenter
+    ? 'android_center'
+    : null;
+
+  const handleCloseActiveModal = useCallback(() => {
+    setShowAuthModal(false);
+    setShowNotificationModal(false);
+    setShowAndroidCenter(false);
+  }, []);
+
+  useAndroidBackButton({
+    activeModal: activeModalName,
+    onCloseModal: handleCloseActiveModal,
+    canGoBackTab: tabHistory.length > 1,
+    onGoBackTab: () => {
+      setTabHistory((prev) => {
+        if (prev.length <= 1) return prev;
+        const updated = prev.slice(0, -1);
+        const target = updated[updated.length - 1];
+        setActiveTab(target);
+        return updated;
+      });
+    },
+  });
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -171,24 +218,63 @@ export default function App() {
     }
   });
 
-  // Synchronize theme to document element
+  // Synchronize theme to document element and Android status bar meta tag
   useEffect(() => {
     const root = document.documentElement;
+    let isDark = false;
     if (theme === 'dark') {
       root.classList.add('dark');
+      isDark = true;
     } else if (theme === 'light') {
       root.classList.remove('dark');
+      isDark = false;
     } else {
       // System
       const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
       if (prefersDark) {
         root.classList.add('dark');
+        isDark = true;
       } else {
         root.classList.remove('dark');
+        isDark = false;
       }
     }
     localStorage.setItem('plumbline_theme', theme);
+
+    // Dynamic Android system navigation bar & status bar color tinting
+    const metaTheme = document.getElementById('meta-theme-color');
+    if (metaTheme) {
+      metaTheme.setAttribute('content', isDark ? '#0D0B09' : '#FAF8F4');
+    }
   }, [theme]);
+
+  // Android Launcher shortcuts & Share target deep link processor
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const requestedTab = params.get('tab') as TabType;
+      const validTabs: TabType[] = [
+        'path',
+        'dynamic_plan',
+        'plants',
+        'articles',
+        'community',
+        'guide',
+        'bible',
+        'saved',
+        'settings',
+      ];
+      if (requestedTab && validTabs.includes(requestedTab)) {
+        setActiveTab(requestedTab);
+      }
+      const sharedTitle = params.get('title') || params.get('text');
+      if (sharedTitle) {
+        setInAppToast(`Shared to Plumb Line: "${sharedTitle.slice(0, 45)}..."`);
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
 
   // Sync data to localStorage
   useEffect(() => {
@@ -460,9 +546,27 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-1.5">
+            {/* Android AAB & APK Center */}
+            <button
+              onClick={() => {
+                haptics.tap();
+                setShowAndroidCenter(true);
+              }}
+              className="p-2 rounded-xl text-[var(--text-muted)] hover:text-emerald-500 hover:bg-[var(--bg-muted)] relative transition-colors cursor-pointer"
+              title="Native Android (AAB & APK) Center"
+            >
+              <Smartphone size={17} />
+              {isInstallable && !isInstalled && (
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              )}
+            </button>
+
             {/* Notification Bell */}
             <button
-              onClick={() => setShowNotificationModal(true)}
+              onClick={() => {
+                haptics.tap();
+                setShowNotificationModal(true);
+              }}
               className="p-2 rounded-xl text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-muted)] relative transition-colors cursor-pointer"
               title="Reminders & Notifications"
             >
@@ -476,7 +580,10 @@ export default function App() {
 
             {/* Auth Profile / Sign-in */}
             <button
-              onClick={() => setShowAuthModal(true)}
+              onClick={() => {
+                haptics.tap();
+                setShowAuthModal(true);
+              }}
               className="flex items-center gap-1.5 py-1 px-2.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-main)] hover:border-amber-500/60 text-xs transition-colors cursor-pointer"
               title={currentUser ? `Signed in as ${currentUser.email}` : 'Sign In / Register'}
             >
@@ -496,6 +603,9 @@ export default function App() {
           </div>
         </header>
 
+        {/* Android In-App APK / PWA Install Prompt Banner */}
+        <AndroidInstallBanner onOpenAndroidCenter={() => setShowAndroidCenter(true)} />
+
         {/* Horizontal Category Navigation Track */}
         <div className="h-10 border-b border-[var(--border-subtle)] bg-[var(--bg-main)] px-3 flex items-center gap-1.5 overflow-x-auto shrink-0 select-none scrollbar-none">
           {[
@@ -514,7 +624,7 @@ export default function App() {
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id as TabType)}
+                onClick={() => handleSelectTab(tab.id as TabType)}
                 className={`px-2.5 py-1 rounded-xl text-xs font-medium whitespace-nowrap flex items-center gap-1.5 transition-all cursor-pointer ${
                   isCurrent
                     ? 'bg-[var(--text-main)] text-[var(--bg-main)] font-semibold shadow-xs'
@@ -689,88 +799,129 @@ export default function App() {
                   currentUser={currentUser}
                   onOpenAuth={() => setShowAuthModal(true)}
                   onOpenNotifications={() => setShowNotificationModal(true)}
+                  isStandalone={isInstalled}
+                  isInstallable={isInstallable}
+                  onTriggerInstall={install}
                 />
               </motion.div>
             )}
           </AnimatePresence>
         </div>
 
-        {/* Bottom iOS Navigation Bar */}
+        {/* Android Material 3 Bottom Navigation Bar */}
         <nav
           id="main-bottom-navigation"
-          className="h-16 border-t border-[var(--border-subtle)] bg-[var(--bg-surface)] px-2 flex items-center justify-around shrink-0 z-30 select-none shadow-xs"
+          className="h-16 border-t border-[var(--border-subtle)] bg-[var(--bg-surface)] px-2 flex items-center justify-around shrink-0 z-30 select-none shadow-xs pb-safe"
         >
           {/* Today Tab */}
           <button
             id="tab-btn-path"
-            onClick={() => setActiveTab('path')}
-            className={`flex flex-col items-center justify-center flex-1 py-1 transition-colors cursor-pointer ${
+            onClick={() => handleSelectTab('path')}
+            className={`flex flex-col items-center justify-center flex-1 py-1 transition-all cursor-pointer ${
               activeTab === 'path'
                 ? 'text-[var(--accent-gold)] font-semibold'
                 : 'text-[var(--text-tertiary)] hover:text-[var(--text-muted)]'
             }`}
           >
-            <Calendar size={18} />
-            <span className="text-[10px] mt-1 tracking-tight">Today</span>
+            <div
+              className={`flex items-center justify-center transition-all ${
+                activeTab === 'path'
+                  ? 'px-3.5 py-0.5 rounded-full bg-[var(--accent-gold)]/15'
+                  : 'p-0.5'
+              }`}
+            >
+              <Calendar size={18} />
+            </div>
+            <span className="text-[10px] mt-0.5 tracking-tight">Today</span>
           </button>
 
           {/* Dynamic AI Plan Tab */}
           <button
             id="tab-btn-plan"
-            onClick={() => setActiveTab('dynamic_plan')}
-            className={`flex flex-col items-center justify-center flex-1 py-1 transition-colors cursor-pointer ${
+            onClick={() => handleSelectTab('dynamic_plan')}
+            className={`flex flex-col items-center justify-center flex-1 py-1 transition-all cursor-pointer ${
               activeTab === 'dynamic_plan'
                 ? 'text-[var(--accent-gold)] font-semibold'
                 : 'text-[var(--text-tertiary)] hover:text-[var(--text-muted)]'
             }`}
           >
-            <div className="relative">
+            <div
+              className={`relative flex items-center justify-center transition-all ${
+                activeTab === 'dynamic_plan'
+                  ? 'px-3.5 py-0.5 rounded-full bg-[var(--accent-gold)]/15'
+                  : 'p-0.5'
+              }`}
+            >
               <Sparkles size={18} />
-              <span className="absolute -top-1 -right-1 w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+              <span className="absolute top-0 right-1 w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
             </div>
-            <span className="text-[10px] mt-1 tracking-tight">AI Plan</span>
+            <span className="text-[10px] mt-0.5 tracking-tight">AI Plan</span>
           </button>
 
           {/* Plant Care Tab */}
           <button
             id="tab-btn-plants"
-            onClick={() => setActiveTab('plants')}
-            className={`flex flex-col items-center justify-center flex-1 py-1 transition-colors cursor-pointer ${
+            onClick={() => handleSelectTab('plants')}
+            className={`flex flex-col items-center justify-center flex-1 py-1 transition-all cursor-pointer ${
               activeTab === 'plants'
                 ? 'text-emerald-500 font-semibold'
                 : 'text-[var(--text-tertiary)] hover:text-[var(--text-muted)]'
             }`}
           >
-            <Leaf size={18} />
-            <span className="text-[10px] mt-1 tracking-tight">Plants</span>
+            <div
+              className={`flex items-center justify-center transition-all ${
+                activeTab === 'plants'
+                  ? 'px-3.5 py-0.5 rounded-full bg-emerald-500/15'
+                  : 'p-0.5'
+              }`}
+            >
+              <Leaf size={18} />
+            </div>
+            <span className="text-[10px] mt-0.5 tracking-tight">Plants</span>
           </button>
 
           {/* Bible Tab */}
           <button
             id="tab-btn-bible"
-            onClick={() => setActiveTab('bible')}
-            className={`flex flex-col items-center justify-center flex-1 py-1 transition-colors cursor-pointer ${
+            onClick={() => handleSelectTab('bible')}
+            className={`flex flex-col items-center justify-center flex-1 py-1 transition-all cursor-pointer ${
               activeTab === 'bible'
                 ? 'text-[var(--accent-gold)] font-semibold'
                 : 'text-[var(--text-tertiary)] hover:text-[var(--text-muted)]'
             }`}
           >
-            <BookOpen size={18} />
-            <span className="text-[10px] mt-1 tracking-tight">Bible</span>
+            <div
+              className={`flex items-center justify-center transition-all ${
+                activeTab === 'bible'
+                  ? 'px-3.5 py-0.5 rounded-full bg-[var(--accent-gold)]/15'
+                  : 'p-0.5'
+              }`}
+            >
+              <BookOpen size={18} />
+            </div>
+            <span className="text-[10px] mt-0.5 tracking-tight">Bible</span>
           </button>
 
           {/* Settings Tab */}
           <button
             id="tab-btn-settings"
-            onClick={() => setActiveTab('settings')}
-            className={`flex flex-col items-center justify-center flex-1 py-1 transition-colors cursor-pointer ${
+            onClick={() => handleSelectTab('settings')}
+            className={`flex flex-col items-center justify-center flex-1 py-1 transition-all cursor-pointer ${
               activeTab === 'settings'
                 ? 'text-[var(--accent-gold)] font-semibold'
                 : 'text-[var(--text-tertiary)] hover:text-[var(--text-muted)]'
             }`}
           >
-            <Settings size={18} />
-            <span className="text-[10px] mt-1 tracking-tight">Settings</span>
+            <div
+              className={`flex items-center justify-center transition-all ${
+                activeTab === 'settings'
+                  ? 'px-3.5 py-0.5 rounded-full bg-[var(--accent-gold)]/15'
+                  : 'p-0.5'
+              }`}
+            >
+              <Settings size={18} />
+            </div>
+            <span className="text-[10px] mt-0.5 tracking-tight">Settings</span>
           </button>
         </nav>
 
@@ -784,7 +935,16 @@ export default function App() {
         <NotificationModal
           isOpen={showNotificationModal}
           onClose={() => setShowNotificationModal(false)}
-          onNavigateTab={(tab) => setActiveTab(tab)}
+          onNavigateTab={(tab) => handleSelectTab(tab)}
+        />
+
+        {/* Android Package & AAB/APK Center Modal */}
+        <AndroidPackageModal
+          isOpen={showAndroidCenter}
+          onClose={() => setShowAndroidCenter(false)}
+          isStandalone={isInstalled}
+          isInstallable={isInstallable}
+          onTriggerInstall={install}
         />
 
         {/* In-App Push Notification Confirmation Toast */}

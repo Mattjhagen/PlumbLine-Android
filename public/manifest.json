@@ -1,22 +1,128 @@
 {
+  "id": "/#rooted-guide-android",
   "name": "Plumb Line - Rooted Guide",
-  "short_name": "Rooted Guide",
+  "short_name": "Plumb Line",
   "description": "A minimal, personal Bible-study guide centered on a blinking cursor, with grounded Scripture, daily path, and offline reader.",
-  "start_url": "/",
+  "start_url": "/?utm_source=android_app",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#121511",
-  "theme_color": "#121511",
+  "display_override": [
+    "standalone",
+    "minimal-ui",
+    "window-controls-overlay"
+  ],
+  "orientation": "portrait-primary",
+  "background_color": "#0D0B09",
+  "theme_color": "#0D0B09",
+  "lang": "en-US",
+  "dir": "ltr",
+  "categories": [
+    "lifestyle",
+    "books",
+    "education",
+    "utilities"
+  ],
+  "prefer_related_applications": false,
+  "related_applications": [
+    {
+      "platform": "play",
+      "id": "com.mattjhagen.plumbline",
+      "url": "https://play.google.com/store/apps/details?id=com.mattjhagen.plumbline"
+    }
+  ],
   "icons": [
     {
       "src": "/app-logo-adaptive.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/app-logo-adaptive.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     },
     {
       "src": "/icon.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/android-icon-foreground.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/android-icon-monochrome.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "monochrome"
     }
-  ]
+  ],
+  "shortcuts": [
+    {
+      "name": "Today's Path",
+      "short_name": "Today",
+      "description": "Open today's scripture path and meditation",
+      "url": "/?tab=path",
+      "icons": [
+        {
+          "src": "/icon.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Scripture Reader",
+      "short_name": "Bible",
+      "description": "Read the World English Bible offline",
+      "url": "/?tab=bible",
+      "icons": [
+        {
+          "src": "/icon.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "AI Study Plan",
+      "short_name": "AI Plan",
+      "description": "Generate dynamic topical reading plans",
+      "url": "/?tab=dynamic_plan",
+      "icons": [
+        {
+          "src": "/icon.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Botanical Care",
+      "short_name": "Plants",
+      "description": "View botanical care logs and watering tasks",
+      "url": "/?tab=plants",
+      "icons": [
+        {
+          "src": "/icon.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
+  ],
+  "share_target": {
+    "action": "/?action=share",
+    "method": "GET",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  }
 }

@@ -1,0 +1,15 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.mattjhagen.plumbline",
+      "sha256_cert_fingerprints": [
+        "14:6D:E9:44:AB:F0:60:73:86:8E:24:DC:02:2B:56:46:71:FF:6B:08:D4:69:68:E3:49:F4:3B:24:A5:50:52:42",
+        "FA:C6:17:45:DC:09:03:78:6F:B9:ED:E6:2A:96:2B:39:9F:73:48:F0:BB:6F:89:9B:83:32:66:75:91:03:3B:9C"
+      ]
+    }
+  }
+]
